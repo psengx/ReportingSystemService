@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ReportingSystemService.Application.Dto;
 using ReportingSystemService.Infrastucture;
+using ReportingSystemService.Infrastucture.Messaging;
 using ReportingSystemService.Models;
 
 namespace ReportingSystemService.Controllers
@@ -14,9 +15,11 @@ namespace ReportingSystemService.Controllers
     {
         // Внедрение контекста базы данных для сохранения запросов на отчеты
         private readonly AddDbContext _context;
-        public ReportsController(AddDbContext context)
+        private readonly RabbitMqProducer _producer;
+        public ReportsController(AddDbContext context, RabbitMqProducer producer)
         {
             _context = context;
+            _producer = producer;
         }
         // Метод для создания нового запроса на отчет
         [HttpPost]
@@ -35,6 +38,15 @@ namespace ReportingSystemService.Controllers
             // Сохранение запроса в базе данных
             _context.ReportRequests.Add(report);
             await _context.SaveChangesAsync();
+
+            await _producer.SendMessage(new ReportRequestMessage // Создаем сообщение для RabbitMQ
+            {
+                Id = report.Id,
+                ProductId = report.ProductId,
+                OrderId = report.OrderId,
+                From = report.From,
+                To = report.To
+            });
 
             // Возвращаем идентификатор созданного отчета
             return Ok(new { report.Id });
