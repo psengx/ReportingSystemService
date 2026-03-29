@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ReportingSystemService.Models;
 
 namespace ReportingSystemService.Infrastucture
@@ -13,36 +12,39 @@ namespace ReportingSystemService.Infrastucture
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while(!stoppingToken.IsCancellationRequested)
+            while (!stoppingToken.IsCancellationRequested)
             {
-                using (var scope = _scoreFactory.CreateScope()) // Создание области (scope) для получения сервиса AddDbContext
+                var scope = _scoreFactory.CreateScope(); // Создание области (scope) для получения сервиса AddDbContext
+
+                AddDbContext db = scope.ServiceProvider.GetRequiredService<AddDbContext>();
+
+                ReportRequest? reportRequest = await db.ReportRequests
+                    .Where(report => report.Status == "Pending")
+                    .FirstOrDefaultAsync(stoppingToken); // Получение первого запроса со статусом "Pending"
+                if (reportRequest == null)
+                    continue; // Если нет запросов, продолжить цикл
+                reportRequest.Status = "Processing";
+                await db.SaveChangesAsync();
+
+                await Task.Delay(10000); // Симуляция генерации отчета (временная)
+
+                int views = new Random().Next(100, 1000); // Случайное количество просмотров
+                int payments = new Random().Next(10, 100); // Случайное количество платежей
+                decimal ratio = payments > 0 ? (decimal)(views / payments) : 0; // Вычисление соотношения просмотров к платежам
+
+                db.ReportResponses.Add(new ReportResponse
                 {
-                    AddDbContext db = scope.ServiceProvider.GetRequiredService<AddDbContext>();
-                    
-                    ReportRequest reportRequest = await db.ReportRequests
-                        .Where(r => r.Status == "Pending")
-                        .FirstAsync(); // Получение первого запроса со статусом "Pending"
-
-                    reportRequest.Status = "Processing";
-                    await db.SaveChangesAsync();
-
-                    await Task.Delay(10000); // Симуляция генерации отчета (временная)
-
-                    int views = new Random().Next(100, 1000); // Случайное количество просмотров
-                    int payments = new Random().Next(10, 100); // Случайное количество платежей
-
-                    db.ReportResponses.Add(new ReportResponse
-                    {
                     Id = Guid.NewGuid(),
-                        ReportRequestId = reportRequest.Id,
-                        Ratio = payments / views,
-                        PaymentsCount = payments
-                    });
+                    ReportRequestId = reportRequest.Id,
+                    Ratio = ratio,
+                    PaymentsCount = payments,
+                    ViewsCount = views
+                });
 
-                    reportRequest.Status = "Created";
-                    await db.SaveChangesAsync();
-                }
-                Thread.Sleep(5000); // Пауза между проверками
+                reportRequest.Status = "Created";
+                await db.SaveChangesAsync();
+
+                Thread.Sleep(50000); // Пауза между проверками
             }
         }
     }
