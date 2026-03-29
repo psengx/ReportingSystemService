@@ -18,7 +18,7 @@ namespace ReportingSystemService
             builder.Services.AddSwaggerGen();
 
             builder.Services.AddDbContext<AddDbContext>(options =>
-                options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+                options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
             builder.Services.AddHostedService<ReportWorker>();
 
             var app = builder.Build();
