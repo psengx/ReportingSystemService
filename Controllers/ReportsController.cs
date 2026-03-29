@@ -47,8 +47,11 @@ namespace ReportingSystemService.Controllers
             if (reportRequest == null)
                 return NotFound();
 
-            ReportResponse reportResponse = await _context.ReportResponses
-                .FirstAsync(response => response.ReportRequestId == id);
+            ReportResponse? reportResponse = await _context.ReportResponses
+                .FirstOrDefaultAsync(response => response.ReportRequestId == id);
+
+            if (reportResponse == null)
+                return NotFound();
 
             return Ok(new
             {
