@@ -33,6 +33,7 @@ namespace ReportingSystemService.Infrastucture
 
                     db.ReportResponses.Add(new ReportResponse
                     {
+                    Id = Guid.NewGuid(),
                         ReportRequestId = reportRequest.Id,
                         Ratio = payments / views,
                         PaymentsCount = payments
