@@ -6,18 +6,17 @@ namespace ReportingSystemService.Infrastucture.Messaging
 {
     public class RabbitMqProducer
     {
-        public IConnection? connection = null; // Соединение с RabbitMq
-        public IChannel? channel = null; // Канал для отправки сообщений в RabbitMq
+        private readonly RabbitMqService _rabbitMqService; // Сервис для работы с RabbitMq
+        public RabbitMqProducer(RabbitMqService rabbitMqService)
+        {
+            _rabbitMqService = rabbitMqService; 
+        }
+
         public async Task SendMessage(object obj)
         {
-            var message = JsonSerializer.Serialize(obj);
-
-            var factory = new ConnectionFactory { HostName = "rabbitmq" }; // Фабрика соединений с названием контейнера
-            
-            if (connection == null)
-                connection = await factory.CreateConnectionAsync();
+            IChannel channel = await _rabbitMqService.GetChannelAsync(); // Получение канала для работы с RabbitMq
             if (channel == null)
-                channel = await connection.CreateChannelAsync();
+                throw new Exception("RabbitMQ channel is NULL");
 
             channel?.QueueDeclareAsync(queue: "ReportRequests", // Объявление очереди для сообщений
                                durable: false,
@@ -25,11 +24,12 @@ namespace ReportingSystemService.Infrastucture.Messaging
                                autoDelete: false,
                                arguments: null);
 
-            var body = Encoding.UTF8.GetBytes(message); // Кодирование сообщения в массив байтов для отправки
+            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(obj)); // Кодирование сообщения в массив байтов для отправки
 
             channel?.BasicPublishAsync(exchange: "", // Отправка сообщения в очередь
                            routingKey: "ReportRequests",
                            body: body);
+            await Task.CompletedTask;
         }
     }
 }

@@ -10,21 +10,20 @@ namespace ReportingSystemService.Infrastucture.Messaging
 {
     public class RabbitMqConsumer : BackgroundService
     {
-        public IConnection? connection = null; // Соединение с RabbitMq
-        public IChannel? channel = null; // Канал для получения сообщений из RabbitMq
+        private readonly RabbitMqService _rabbitMqService; // Сервис для работы с RabbitMq
+
         private readonly IServiceScopeFactory _scopeFactory; // Фабрика для создания области (scope) для получения сервиса AddDbContext
-        public RabbitMqConsumer(IServiceScopeFactory scopeFactory)
+        public RabbitMqConsumer(IServiceScopeFactory scopeFactory, RabbitMqService rabbitMqService)
         {
             _scopeFactory = scopeFactory;
+            _rabbitMqService = rabbitMqService;
         }
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken) 
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            ConnectionFactory factory = new ConnectionFactory { HostName = "rabbitmq" }; // Фабрика соединений с названием контейнера
-            
-            if (connection == null)
-                connection = await factory.CreateConnectionAsync();
+            var channel = await _rabbitMqService.GetChannelAsync(); // Получение канала для работы с RabbitMq
             if (channel == null)
-                channel = await connection.CreateChannelAsync();
+                throw new Exception("RabbitMQ channel is NULL");
 
             channel?.QueueDeclareAsync(queue: "ReportRequests", // Объявление очереди, из которой буду забирать сообщения
                                durable: false,
@@ -40,13 +39,13 @@ namespace ReportingSystemService.Infrastucture.Messaging
                 var reportRequestMessage = JsonSerializer.Deserialize<ReportRequestMessage>(message);
 
                 if (reportRequestMessage == null)
-                    return;
+                    throw new Exception("Received message is NULL");
 
                 await ReportProcessing(reportRequestMessage); // Метод для обработки запроса на генерацию отчета
             };
-            await channel!.BasicConsumeAsync(queue: "ReportRequests", 
-                                    autoAck: true, 
-                                    consumer: consumer); 
+            await channel!.BasicConsumeAsync(queue: "ReportRequests",
+                                    autoAck: false,
+                                    consumer: consumer);
             await Task.Delay(Timeout.Infinite, stoppingToken); // Бесконечная задержка, чтобы сервис продолжал работать и обрабатывать сообщения
         }
 
@@ -59,28 +58,30 @@ namespace ReportingSystemService.Infrastucture.Messaging
 
             ReportRequest? reportRequest = await db.ReportRequests
                 .FirstOrDefaultAsync(request => request.Id == reportRequestMessage.Id);
-            if (reportRequest != null)
+            if (reportRequest == null)
+                throw new Exception($"ReportRequest with Id {reportRequestMessage.Id} not found in database");
+
+            reportRequest.Status = "Processing"; // Обновление статуса на "Processing"
+            await db.SaveChangesAsync();
+
+            // Симуляция генерации отчета
+            await Task.Delay(10000); 
+            int views = new Random().Next(100, 1000);
+            int payments = new Random().Next(10, 100); 
+            decimal ratio = payments > 0 ? (decimal)payments / views : 0;
+
+            // Сохранение результата в базу данных
+            db.ReportResponses.Add(new ReportResponse
             {
-                reportRequest.Status = "Processing"; // Обновление статуса на "Processing"
-                await db.SaveChangesAsync();
-                await Task.Delay(10000); // Симуляция генерации отчета (временная)
+                Id = Guid.NewGuid(),
+                ReportRequestId = reportRequest.Id,
+                Ratio = ratio,
+                PaymentsCount = payments,
+                ViewsCount = views
+            });
 
-                int views = new Random().Next(100, 1000); // Случайное количество просмотров
-                int payments = new Random().Next(10, 100); // Случайное количество платежей
-                decimal ratio = payments > 0 ? (decimal)payments / views : 0; // Вычисление соотношения просмотров к платежам
-
-                db.ReportResponses.Add(new ReportResponse
-                {
-                    Id = Guid.NewGuid(),
-                    ReportRequestId = reportRequest.Id,
-                    Ratio = ratio,
-                    PaymentsCount = payments,
-                    ViewsCount = views
-                });
-
-                reportRequest.Status = "Ready";
-                await db.SaveChangesAsync();
-            }
+            reportRequest.Status = "Ready";
+            await db.SaveChangesAsync();
         }
     }
 }
