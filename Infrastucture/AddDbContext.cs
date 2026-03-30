@@ -5,9 +5,12 @@ namespace ReportingSystemService.Infrastucture
 {
     public class AddDbContext : DbContext
     {
-        public DbSet<ReportRequest> ReportRequests { get; set; }
-        public DbSet<ReportResponse> ReportResponses { get; set; }
+        public DbSet<ReportRequestEntity> ReportRequests { get; set; }
+        public DbSet<ReportResponseEntity> ReportResponses { get; set; }
         public AddDbContext(DbContextOptions<AddDbContext> options) : base(options)
+        {
+        }
+        public AddDbContext(DbContextOptions options) : base(options)
         {
         }
     }
