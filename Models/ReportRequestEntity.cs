@@ -1,6 +1,6 @@
 ﻿namespace ReportingSystemService.Models
 {
-    public class ReportRequest
+    public class ReportRequestEntity
     {
         public Guid Id { get; set; }
         public Guid ProductId { get; set; }
