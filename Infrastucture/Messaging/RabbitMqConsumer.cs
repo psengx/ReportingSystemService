@@ -11,12 +11,12 @@ namespace ReportingSystemService.Infrastucture.Messaging
     public class RabbitMqConsumer : BackgroundService
     {
         private readonly RabbitMqService _rabbitMqService; // Сервис для работы с RabbitMq
+        private readonly ReportsService _reportsService;
 
-        private readonly IServiceScopeFactory _scopeFactory; // Фабрика для создания области (scope) для получения сервиса AddDbContext
-        public RabbitMqConsumer(IServiceScopeFactory scopeFactory, RabbitMqService rabbitMqService)
+        public RabbitMqConsumer(RabbitMqService rabbitMqService, ReportsService reportsService)
         {
-            _scopeFactory = scopeFactory;
             _rabbitMqService = rabbitMqService;
+            _reportsService = reportsService;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,47 +41,12 @@ namespace ReportingSystemService.Infrastucture.Messaging
                 if (reportRequestMessage == null)
                     throw new Exception("Received message is NULL");
 
-                await ReportProcessing(reportRequestMessage); // Метод для обработки запроса на генерацию отчета
+                await _reportsService.ReportProcessing(reportRequestMessage); // Метод для обработки запроса на генерацию отчета
             };
             await channel!.BasicConsumeAsync(queue: "ReportRequests",
                                     autoAck: false,
                                     consumer: consumer);
             await Task.Delay(Timeout.Infinite, stoppingToken); // Бесконечная задержка, чтобы сервис продолжал работать и обрабатывать сообщения
-        }
-
-        public async Task ReportProcessing(ReportRequestMessage reportRequestMessage)
-        {
-            // Логика обработки сообщения
-            using var scope = _scopeFactory.CreateScope(); // Создание области (scope) для получения сервиса AddDbContext
-
-            AddDbContext db = scope.ServiceProvider.GetRequiredService<AddDbContext>();
-
-            ReportRequest? reportRequest = await db.ReportRequests
-                .FirstOrDefaultAsync(request => request.Id == reportRequestMessage.Id);
-            if (reportRequest == null)
-                throw new Exception($"ReportRequest with Id {reportRequestMessage.Id} not found in database");
-
-            reportRequest.Status = "Processing"; // Обновление статуса на "Processing"
-            await db.SaveChangesAsync();
-
-            // Симуляция генерации отчета
-            await Task.Delay(10000); 
-            int views = new Random().Next(100, 1000);
-            int payments = new Random().Next(10, 100); 
-            decimal ratio = payments > 0 ? (decimal)payments / views : 0;
-
-            // Сохранение результата в базу данных
-            db.ReportResponses.Add(new ReportResponse
-            {
-                Id = Guid.NewGuid(),
-                ReportRequestId = reportRequest.Id,
-                Ratio = ratio,
-                PaymentsCount = payments,
-                ViewsCount = views
-            });
-
-            reportRequest.Status = "Ready";
-            await db.SaveChangesAsync();
         }
     }
 }

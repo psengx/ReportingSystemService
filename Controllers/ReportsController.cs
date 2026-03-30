@@ -16,58 +16,37 @@ namespace ReportingSystemService.Controllers
         // Внедрение контекста базы данных для сохранения запросов на отчеты
         private readonly AddDbContext _context;
         private readonly RabbitMqProducer _producer;
+        private readonly ReportsService _reportsService;
         public ReportsController(AddDbContext context, RabbitMqProducer producer)
         {
             _context = context;
             _producer = producer;
+            _reportsService = new ReportsService(context, producer);
         }
         // Метод для создания нового запроса на отчет
         [HttpPost]
         public async Task<IActionResult> CreateReport(CreateReportRequest request)
         {
-            ReportRequest report = new()
-            {
-                Id = Guid.NewGuid(),
-                ProductId = request.ProductId,
-                OrderId = request.OrderId,
-                From = request.From,
-                To = request.To,
-                Status = "Pending"
-            };
-            // Сохранение запроса в базе данных
-            _context.ReportRequests.Add(report);
-            await _context.SaveChangesAsync();
-
-            await _producer.SendMessage(new ReportRequestMessage // Отправляем сообщение в шину RabbitMQ
-            {
-                Id = report.Id,
-                ProductId = report.ProductId,
-                OrderId = report.OrderId,
-                From = report.From,
-                To = report.To
-            });
-
-            // Возвращаем идентификатор созданного отчета
-            return Ok(new { report.Id });
+            var id = await _reportsService.CreateReportAsync(request);
+            return Ok(id);
         }
 
         [HttpGet("id")]
         public async Task<IActionResult> GetReport(Guid id)
         {
-            ReportRequest? reportRequest = await _context.ReportRequests.FindAsync(id); // Ищем запрос на отчет по идентификатору
-            if (reportRequest == null)
-                return NotFound();
+            if (id == Guid.Empty)
+                return BadRequest("Invalid report ID.");
 
-            ReportResponse? reportResponse = await _context.ReportResponses
-                .FirstOrDefaultAsync(response => response.ReportRequestId == id); // Ищем ответ на отчет, связанный с этим запросом
-
-            return Ok(new
+            var report = await _reportsService.GetReportAsync(id);
+            if (report.Status == "Ready")
             {
-                reportRequest.Id,
-                reportRequest.Status,
-                reportResponse
-            });
-
+                return Ok(new ReportResponse()
+                {
+                    Ratio = report.ReportResponse.Ratio,
+                    PaymentsCount = report.ReportResponse.PaymentsCount,
+                });
+            }
+            return Ok(report);
         }
     }
 }
