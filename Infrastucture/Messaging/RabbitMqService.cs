@@ -2,7 +2,7 @@
 
 namespace ReportingSystemService.Infrastucture.Messaging
 {
-    public class RabbitMqService : IRabbitMqService
+    public class RabbitMqService
     {
         public IConnection? connection = null; // Соединение с RabbitMq
         public IChannel? channel = null; // Канал для RabbitMq

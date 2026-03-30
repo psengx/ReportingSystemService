@@ -16,6 +16,7 @@ namespace ReportingSystemService
 
             builder.Services.AddDbContext<AddDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddSingleton<RabbitMqService>(); // Регистрируем RabbitMqService как синглтон
             builder.Services.AddSingleton<RabbitMqProducer>(); // Регистрируем RabbitMqProducer как синглтон
             builder.Services.AddHostedService<RabbitMqConsumer>(); // Регистрируем RabbitMqConsumer как фоновую службу
 

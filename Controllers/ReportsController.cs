@@ -25,7 +25,6 @@ namespace ReportingSystemService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateReport(CreateReportRequest request)
         {
-            // Логика создания отчета
             ReportRequest report = new()
             {
                 Id = Guid.NewGuid(),
@@ -39,7 +38,7 @@ namespace ReportingSystemService.Controllers
             _context.ReportRequests.Add(report);
             await _context.SaveChangesAsync();
 
-            await _producer.SendMessage(new ReportRequestMessage // Создаем сообщение для RabbitMQ
+            await _producer.SendMessage(new ReportRequestMessage // Отправляем сообщение в шину RabbitMQ
             {
                 Id = report.Id,
                 ProductId = report.ProductId,
@@ -55,15 +54,12 @@ namespace ReportingSystemService.Controllers
         [HttpGet("id")]
         public async Task<IActionResult> GetReport(Guid id)
         {
-            ReportRequest? reportRequest = await _context.ReportRequests.FindAsync(id);
+            ReportRequest? reportRequest = await _context.ReportRequests.FindAsync(id); // Ищем запрос на отчет по идентификатору
             if (reportRequest == null)
                 return NotFound();
 
             ReportResponse? reportResponse = await _context.ReportResponses
-                .FirstOrDefaultAsync(response => response.ReportRequestId == id);
-
-            if (reportResponse == null)
-                return NotFound();
+                .FirstOrDefaultAsync(response => response.ReportRequestId == id); // Ищем ответ на отчет, связанный с этим запросом
 
             return Ok(new
             {
