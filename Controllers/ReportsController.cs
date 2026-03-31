@@ -1,10 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
 using ReportingSystemService.Application.Dto;
-using ReportingSystemService.Infrastucture;
-using ReportingSystemService.Infrastucture.Messaging;
-using ReportingSystemService.Models;
+using ReportingSystemService.Infrastructure;
+using ReportingSystemService.Infrastructure.Messaging;
 
 namespace ReportingSystemService.Controllers
 {
@@ -34,12 +31,9 @@ namespace ReportingSystemService.Controllers
         [HttpGet("id")]
         public async Task<IActionResult> GetReport(Guid id)
         {
-            if (id == Guid.Empty)
-                return BadRequest("Invalid report ID.");
-
             var report = await _reportsService.GetReportAsync(id);
 
-            return Ok(report);
+            return (report.Status != "Ready") ? Ok(report) : Ok(report.ReportResponse);
         }
     }
 }

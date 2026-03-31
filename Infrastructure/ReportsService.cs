@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ReportingSystemService.Application.Dto;
-using ReportingSystemService.Infrastucture.Messaging;
+using ReportingSystemService.Infrastructure.Messaging;
 using ReportingSystemService.Models;
 
-namespace ReportingSystemService.Infrastucture
+namespace ReportingSystemService.Infrastructure
 {
     public class ReportsService
     {
@@ -62,39 +62,6 @@ namespace ReportingSystemService.Infrastucture
                 Status = reportRequest.Status,
                 ReportResponse = new() { Ratio = reportResponse?.Ratio ?? 0, PaymentsCount = reportResponse?.PaymentsCount ?? 0 } // Возвращаем статус запроса и данные отчета (если он готов)
             };
-        }
-
-        public async Task ReportProcessing(ReportRequestMessage reportRequestMessage)
-        {
-            // Логика обработки сообщения
-            using var scope = _scopeFactory.CreateScope(); // Создание области (scope) для получения сервиса AddDbContext
-
-            AddDbContext db = scope.ServiceProvider.GetRequiredService<AddDbContext>();
-
-            ReportRequestEntity? reportRequest = await db.ReportRequests
-                .FirstOrDefaultAsync(request => request.Id == reportRequestMessage.Id);
-            
-            reportRequest!.Status = "Processing"; // Обновление статуса на "Processing"
-            await db.SaveChangesAsync();
-
-            // Симуляция генерации отчета
-            await Task.Delay(10000);
-            int views = new Random().Next(100, 1000);
-            int payments = new Random().Next(10, 100);
-            decimal ratio = payments > 0 ? (decimal)payments / views : 0;
-
-            // Сохранение результата в базу данных
-            db.ReportResponses.Add(new ReportResponseEntity
-            {
-                Id = Guid.NewGuid(),
-                ReportRequestId = reportRequest.Id,
-                Ratio = ratio,
-                PaymentsCount = payments,
-                ViewsCount = views
-            });
-
-            reportRequest.Status = "Ready";
-            await db.SaveChangesAsync();
         }
     }
 }

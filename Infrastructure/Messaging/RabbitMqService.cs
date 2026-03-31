@@ -1,6 +1,6 @@
 ﻿using RabbitMQ.Client;
 
-namespace ReportingSystemService.Infrastucture.Messaging
+namespace ReportingSystemService.Infrastructure.Messaging
 {
     public class RabbitMqService
     {

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using ReportingSystemService.Infrastucture;
-using ReportingSystemService.Infrastucture.Messaging;
+using ReportingSystemService.Infrastructure;
+using ReportingSystemService.Infrastructure.Messaging;
 
 namespace ReportingSystemService
 {
