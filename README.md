@@ -33,7 +33,7 @@ ReportingSystem
 │   │   └── ReportResponseDto.cs // Dto для отправки ответа в контроллер
 │   └── Program.cs
 └── ReportingSystemTests
-    └── ReportServiceTests.cs // Тесты для ReportsService
+    └── ReportServiceTests.cs // Тесты для ReportsService (залить не получилось)
 ```
 
 ## Установка проекта
