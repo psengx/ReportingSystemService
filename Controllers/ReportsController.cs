@@ -38,14 +38,7 @@ namespace ReportingSystemService.Controllers
                 return BadRequest("Invalid report ID.");
 
             var report = await _reportsService.GetReportAsync(id);
-            if (report.Status == "Ready")
-            {
-                return Ok(new ReportResponse()
-                {
-                    Ratio = report.ReportResponse.Ratio,
-                    PaymentsCount = report.ReportResponse.PaymentsCount,
-                });
-            }
+
             return Ok(report);
         }
     }

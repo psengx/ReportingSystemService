@@ -50,18 +50,17 @@ namespace ReportingSystemService.Infrastucture
             if (reportRequest == null)
                 return new()
                 {
-                    Id = id,
                     Status = "Not Found",
-                    ReportResponse = null
+                    ReportResponse = { }
                 };
 
             ReportResponseEntity? reportResponse = await _context.ReportResponses
                 .FirstOrDefaultAsync(response => response.ReportRequestId == id); // Ищем ответ на отчет, связанный с этим запросом
 
-            return new() {
-                Id = reportRequest.Id,
+            return new()
+            {
                 Status = reportRequest.Status,
-                ReportResponse = reportResponse
+                ReportResponse = new() { Ratio = reportResponse?.Ratio ?? 0, PaymentsCount = reportResponse?.PaymentsCount ?? 0 } // Возвращаем статус запроса и данные отчета (если он готов)
             };
         }
 

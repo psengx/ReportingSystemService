@@ -4,8 +4,7 @@ namespace ReportingSystemService.Application.Dto
 {
     public class ReportResponseDto
     {
-        public Guid Id { get; set; }
         public string Status { get; set; }
-        public ReportResponseEntity? ReportResponse { get; set; }
+        public ReportResponse ReportResponse { get; set; }
     }
 }
